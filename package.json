@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/1999foxes/java-csharp-ast/issues"
   },
-  "homepage": "https://github.com/1999foxes/java-csharp-ast#readme"
+  "homepage": "https://github.com/1999foxes/java-csharp-ast#readme",
+  "type": "module",
+  "dependencies": {
+    "antlr4": "^4.12.0"
+  }
 }
