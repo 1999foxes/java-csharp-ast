@@ -72,9 +72,8 @@ function getFiles(folder) {
 
 function getAllFiles(folder) {                      // result is sorted by file name
     if (typeof folder === 'string') folder = visit(folder);
-    let result = [];
-    result.push(...getFiles(folder));
-    result.sort((file1, file2) => file1.toString() < file2.toString() ? -1 : 1);
+    let result = getFiles(folder)
+        .sort((file1, file2) => file1.toString() < file2.toString() ? -1 : 1);
     getFolders(folder).forEach(f => result = merge(result, getAllFiles(f)));
     return result;
 
