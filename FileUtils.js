@@ -12,18 +12,20 @@ class File {
     toString() {
         return this.formatedFileName;
     }
-    
-    static filterFileName(fileName) {
-        return fileName.endsWith('.cs') || fileName.endsWith('.java');
-    }
-
-    static formatFileName(fileName) {
-        return fileName.replace(new RegExp(`\.(cs)?(java)?$`), '');
-    }
 
     getText() {
         if (this.text) return this.text;
         return this.text = fs.readFileSync(this.root + this.path, 'utf-8');
+    }
+    
+    // override this
+    static filterFileName(fileName) {
+        return true;
+    }
+
+    // override this
+    static formatFileName(fileName) {
+        return fileName;
     }
 }
 
@@ -34,7 +36,7 @@ class Folder {
 
 const bufferVisited = {};
 
-function visit(root, path = '') {              // 结果仅保留（去后缀名的）代码文件
+function visit(root, path = '') {
     if (bufferVisited[root + path] != undefined)
         return bufferVisited[root + path];
     try {
@@ -72,29 +74,9 @@ function getFiles(folder) {
 
 function getAllFiles(folder) {                      // result is sorted by file name
     if (typeof folder === 'string') folder = visit(folder);
-    let result = getFiles(folder)
-        .sort((file1, file2) => file1.toString() < file2.toString() ? -1 : 1);
-    getFolders(folder).forEach(f => result = merge(result, getAllFiles(f)));
+    let result = getFiles(folder);
+    getFolders(folder).forEach(f => result.push(...getAllFiles(f)));
     return result;
-
-    function merge(a, b) {
-        const result = [];
-        let ai = 0, bi = 0;
-        for (let i = 0; i < a.length + b.length; i++) {
-            if (ai >= a.length) {
-                result[i] = b[bi++];
-            } else if (bi >= b.length) {
-                result[i] = a[ai++];
-            } else {
-                if (a[ai].toString() < b[bi].toString()) {
-                    result[i] = a[ai++];
-                } else {
-                    result[i] = b[bi++];
-                }
-            }
-        }
-        return result;
-    }
 }
 
 
@@ -131,36 +113,40 @@ function searchInFolderFuzzy(target, folder, MAX_TOLERANCE = 5) {
 
 function searchInFolder(target, folder) {
     if (typeof folder === 'string') folder = visit(folder);
-    const files = getAllFiles(folder);
-    return searchInFiles(target, files);
+    return searchInFiles(target, getAllFiles(folder));
 }
 
 
-function searchInFiles(target, files, left = 0, right = files.length) {      // return all possible result, sort by levenshtein distance of file path
+function searchInFiles(target, files) {
     let targetFileName = target.toString();         // target can be a File or just string
-    if (right - left < 10) {
-        const result = files.filter(e => e.toString() == targetFileName);
-        if (target instanceof File) {
-            result.sort((f1, f2) => levenshteinDistance(f1.path, target.path) - levenshteinDistance(f2.path, target.path));
+    files.sort();                                   // sort by toString() result
+    return iter();
+
+    function iter(left = 0, right = files.length) {
+        if (right - left < 10) {
+            const result = files.filter(e => e.toString() == targetFileName);
+            if (target instanceof File) {
+                result.sort((f1, f2) => levenshteinDistance(f1.path, target.path) - levenshteinDistance(f2.path, target.path));
+            }
+            return result;
         }
-        return result;
-    }
-    let half = Math.floor((left + right) / 2);
-    if (files[half].toString() == targetFileName) {
-        let left = half, right = half;
-        while (left >= 0 && files[left].toString() == targetFileName) left--;
-        while (right < files.length && files[right].toString() == targetFileName) right++;
-        const result = files.splice(left + 1, right - left - 1);
-        if (target instanceof File) {
-            result.sort((f1, f2) => levenshteinDistance(f1.path, target.path) - levenshteinDistance(f2.path, target.path));
+        let half = Math.floor((left + right) / 2);
+        if (files[half].toString() == targetFileName) {
+            let left = half, right = half;
+            while (left >= 0 && files[left].toString() == targetFileName) left--;
+            while (right < files.length && files[right].toString() == targetFileName) right++;
+            const result = files.splice(left + 1, right - left - 1);
+            if (target instanceof File) {
+                result.sort((f1, f2) => levenshteinDistance(f1.path, target.path) - levenshteinDistance(f2.path, target.path));
+            }
+            return result;
+        } else if (files[half].toString() < targetFileName) {
+            return iter(half + 1, right);
+        } else {
+            return iter(left, half);
         }
-        return result;
-    } else if (files[half].toString() < targetFileName) {
-        return searchInFiles(target, files, half + 1, right);
-    } else {
-        return searchInFiles(target, files, left, half);
     }
 }
 
 
-export { File, Folder, getFiles, getFolders, visit as visit, getAllFiles, searchInFolderFuzzy, searchInFolder, searchInFiles };
+export { File, Folder, getFiles, getFolders, visit, getAllFiles, searchInFolderFuzzy, searchInFolder, searchInFiles };
