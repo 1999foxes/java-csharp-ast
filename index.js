@@ -1,13 +1,14 @@
-import { File, ls, getAllFiles, buildFileTree, searchFileTree, searchFiles } from './FileUtils.js';
+import { File, ls, getAllFiles, getFileTree, searchInFolderFuzzy, searchInFiles, searchInFolder } from './FileUtils.js';
 import { levenshteinDistance } from './Utils.js';
 
 
 
 
 const src1 = 'src/lucene-main/', src2 = 'src/lucenenet-master/';
-const fileTree1 = buildFileTree(src1), fileTree2 = buildFileTree(src2);
-const fileList1 = getAllFiles(fileTree1), fileList2 = getAllFiles(fileTree2);
-console.log(searchFiles(fileList1, 'StandardAnalyzer'))
+console.log(searchInFolderFuzzy('module-info', src1, ).length);
+console.log(searchInFolderFuzzy('module-in', src1, ).length);
+console.log(searchInFolder('module-info', src1, ).length);
+console.log(searchInFolder('module-in', src1, ).length);
 
 
 // const testData = [

@@ -1,10 +1,14 @@
 import fs from 'fs';
-import { levenshteinDistance } from './Utils';
+import { levenshteinDistance } from './Utils.js';
 
 class File {
     constructor(path) {
         this.path = path;
         this.fileName = path.split('/').splice(-1)[0];
+    }
+
+    toString() {
+        return this.fileName;
     }
 }
 
@@ -14,25 +18,29 @@ class Folder {
 
 
 function ls(folder) {
+    if (typeof folder === 'string') folder = getFileTree(folder);
     return Object.keys(folder);
 }
 
 
-function getSubFolders(folder) {
+function getFolders(folder) {
+    if (typeof folder === 'string') folder = getFileTree(folder);
     return Object.values(folder).filter(e => e instanceof Folder);
 }
 
 
 function getFiles(folder) {
+    if (typeof folder === 'string') folder = getFileTree(folder);
     return Object.values(folder).filter(e => e instanceof File);
 }
 
 
-function getAllFiles(folder) {      // result is sorted by file name
+function getAllFiles(folder) {                      // result is sorted by file name
+    if (typeof folder === 'string') folder = getFileTree(folder);
     let result = [];
     result.push(...getFiles(folder));
     result.sort((file1, file2) => file1.fileName < file2.fileName ? -1 : 1);
-    getSubFolders(folder).forEach(f => result = merge(result, getAllFiles(f)));
+    getFolders(folder).forEach(f => result = merge(result, getAllFiles(f)));
     return result;
 
     function merge(a, b) {
@@ -65,16 +73,19 @@ function formatFileName(fileName) {
 }
 
 
-// 结果仅保留（去后缀名的）代码文件
-function buildFileTree(root, src = '') {
+const fileTreeBuffer = {};
+function getFileTree(root, src = '') {              // 结果仅保留（去后缀名的）代码文件
+    if (fileTreeBuffer[root] != undefined)
+        return fileTreeBuffer[root];
     try {
         const dir = fs.readdirSync(root + src);
         const folder = new Folder();
         dir.forEach(element => {
-            const child = buildFileTree(root, src + element + '/');
+            const child = getFileTree(root, src + element + '/');
             if (child !== null)
                 folder[element] = child;
         });
+        fileTreeBuffer[root + src] = folder;
         return folder;
 
     } catch (e) {
@@ -90,48 +101,50 @@ function buildFileTree(root, src = '') {
 }
 
 
-function searchFileTree(target, fileTree) {         // return 1 result or undefined
+function searchInFolderFuzzy(target, folder, MAX_TOLERANCE = 5) {
+    if (typeof folder === 'string') folder = getFileTree(folder);
     let targetFileName = target instanceof File ? target.fileName : target.toString();
-    let result;
-    const MAX_TOLERANCE = 0;
-    for (let tolerance = 0; result === undefined && tolerance <= MAX_TOLERANCE; tolerance++) {
-        result = dfsIter(target, fileTree, tolerance);
-    }
+    let minDist = targetFileName.length;
+    let result = [];
+    dfsIter(target, folder);
+    if (minDist > MAX_TOLERANCE) return [];
     return result;
 
-    function dfsIter(target, node, tolerance = 0) {
+    function dfsIter(target, node) {
         if (node instanceof File) {
-            if (levenshteinDistance(node.fileName, targetFileName) <= tolerance) {
-                return node;
-            } else {
-                return undefined;
+            const dist = levenshteinDistance(node.fileName, targetFileName);
+            if (dist == minDist) {
+                result.push(node);
+            } else if (dist < minDist) {
+                minDist = dist;
+                result.length = 0;
+                result.push(node);
             }
+            return;
         }
 
         const keys = ls(node);
-        keys.sort((a, b) => levenshteinDistance(a, target) - levenshteinDistance(b, target));
-
         for (let i = 0; i < keys.length; i++) {
-            const result = dfsIter(target, node[keys[i]], tolerance);
-            if (result !== undefined)
-                return result;
+            dfsIter(target, node[keys[i]]);
         }
-
-        return undefined;
     }
 }
 
-function searchFiles(files, target, left, right) {      // return all possible result, sort by levenshtein distance of file path
-    let targetFileName = target instanceof File ? target.fileName : target.toString();
-    if (files.length < 10) {
+function searchInFolder(target, folder) {
+    if (typeof folder === 'string') folder = getFileTree(folder);
+    const files = getAllFiles(folder);
+    return searchInFiles(target, files);
+}
+
+function searchInFiles(target, files, left = 0, right = files.length) {      // return all possible result, sort by levenshtein distance of file path
+    let targetFileName = target.toString();
+    if (right - left < 10) {
         const result = files.filter(e => e.fileName == targetFileName);
         if (target instanceof File) {
             result.sort((f1, f2) => levenshteinDistance(f1.path, target.path) - levenshteinDistance(f2.path, target.path));
         }
         return result;
     }
-    if (left === undefined) left = 0;
-    if (right === undefined) right = files.length;
     let half = Math.floor((left + right) / 2);
     if (files[half].fileName == targetFileName) {
         let left = half, right = half;
@@ -143,12 +156,12 @@ function searchFiles(files, target, left, right) {      // return all possible r
         }
         return result;
     } else if (files[half].fileName < targetFileName) {
-        return searchFiles(files, target, half, right);
+        return searchInFiles(target, files, half + 1, right);
     } else {
-        return searchFiles(files, target, left, half);
+        return searchInFiles(target, files, left, half);
     }
 }
 
 
 
-export {File, Folder, ls, getFiles, getAllFiles, getSubFolders, buildFileTree, searchFileTree, searchFiles};
+export { File, Folder, ls, getFiles, getAllFiles, getFolders, getFileTree, searchInFolderFuzzy, searchInFolder, searchInFiles };
