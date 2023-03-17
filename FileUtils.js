@@ -22,7 +22,8 @@ class File {
     }
 
     getText() {
-        return fs.readFileSync(this.root + this.path, 'utf-8');
+        if (this.text) return this.text;
+        return this.text = fs.readFileSync(this.root + this.path, 'utf-8');
     }
 }
 
@@ -31,11 +32,11 @@ class Folder {
 }
 
 
-const fileTreeBuffer = {};
+const bufferVisited = {};
 
 function visit(root, path = '') {              // 结果仅保留（去后缀名的）代码文件
-    if (fileTreeBuffer[root] != undefined)
-        return fileTreeBuffer[root];
+    if (bufferVisited[root + path] != undefined)
+        return bufferVisited[root + path];
     try {
         const dir = fs.readdirSync(root + path);
         const folder = new Folder();
@@ -44,14 +45,13 @@ function visit(root, path = '') {              // 结果仅保留（去后缀名
             if (child !== null)
                 folder[element] = child;
         });
-        fileTreeBuffer[root + path] = folder;
-        return folder;
+        return bufferVisited[root + path] = folder;
     } catch (e) {
         if (e.code === 'ENOTDIR') {                 // 'src' is a file rather than dir
             path = path.substring(0, path.length - 1)  // remove extra '/'
             if (!File.filterFileName(path))
                 return null;
-            return new File(path, root);
+            return bufferVisited[root + path] = new File(path, root);
         }
         throw e;
     }
