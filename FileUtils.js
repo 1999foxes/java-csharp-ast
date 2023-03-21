@@ -30,8 +30,7 @@ class File {
 }
 
 
-class Folder {
-}
+class Folder {}
 
 
 const bufferVisited = {};
@@ -119,7 +118,8 @@ function searchInFolder(target, folder) {
 
 function searchInFiles(target, files) {
     let targetFileName = target.toString();         // target can be a File or just string
-    files.sort();                                   // sort by toString() result
+    if (files.find((e, i, r) => i+1 < r.length && r[i+1] < e))  // if not sorted
+        files.sort();                               // sort by toString() result
     return iter();
 
     function iter(left = 0, right = files.length) {
