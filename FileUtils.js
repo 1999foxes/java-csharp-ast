@@ -2,22 +2,27 @@ import fs from 'fs';
 import { levenshteinDistance } from './Utils.js';
 
 class File {
-    constructor(path, root='') {
+    constructor(path, root = '') {
         this.path = path;
         this.root = root
         this.fileName = path.split('/').splice(-1)[0];
-        this.formatedFileName = File.formatFileName(this.fileName);
+        this.formattedFileName = File.formatFileName(this.fileName);
+        if (File.getTextByDefault)
+            this.getText();
     }
 
     toString() {
-        return this.formatedFileName;
+        return this.formattedFileName;
     }
 
     getText() {
         if (this.text) return this.text;
         return this.text = fs.readFileSync(this.root + this.path, 'utf-8');
     }
-    
+
+    // override this
+    static getTextByDefault = false
+
     // override this
     static filterFileName(fileName) {
         return true;
@@ -30,7 +35,7 @@ class File {
 }
 
 
-class Folder {}
+class Folder { }
 
 
 const bufferVisited = {};
@@ -118,7 +123,7 @@ function searchInFolder(target, folder) {
 
 function searchInFiles(target, files) {
     let targetFileName = target.toString();         // target can be a File or just string
-    if (files.find((e, i, r) => i+1 < r.length && r[i+1] < e))  // if not sorted
+    if (files.find((e, i, r) => i + 1 < r.length && r[i + 1] < e))  // if not sorted
         files.sort();                               // sort by toString() result
     return iter();
 

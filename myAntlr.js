@@ -1,54 +1,65 @@
 import antlr4 from 'antlr4';
-// import MyGrammarLexer from './MyGrammarLexer.js';
-// import MyGrammarParser from './MyGrammarParser.js';
-// import MyGrammarListener from './MyGrammarListener.js';
 import JavaLexer from './java/JavaLexer.js';
 import JavaParser from './java/JavaParser.js'
 import JavaParserListener from './java/JavaParserListener.js'
+import CSharpLexer from './csharp/CSharpLexer.js';
+import CSharpParser from './csharp/CSharpParser.js';
+import CSharpParserListener from './csharp/CSharpParserListener.js'
+import { File, getAllFiles, searchInFolderFuzzy, searchInFolder } from './FileUtils.js';
 
-const input = 
-`
-class HelloChina{
-	public static void main(String[] args){
-		System.out.println("Hello World!");
-	}
+
+File.filterFileName = function (fileName) {
+    return fileName.endsWith('.cs') || fileName.endsWith('.java');
 }
-`;
-
-
-class MyGrammarListener extends JavaParserListener {
-    enterMethodDeclaration(ctx) {
-        console.log(ctx.getText());
-    }
+File.formatFileName = function (fileName) {
+    return fileName.replace(new RegExp(`\.(cs)?(java)?$`), '');
 }
 
+// const src = 'src/lucene-main/';
+// console.log(searchInFolder("JapaneseTokenizer", src)[0]);
+// const text = searchInFolder("JapaneseTokenizer", src)[0].getText();
 
 
-const chars = new antlr4.InputStream(input);
-const lexer = new JavaLexer(chars);
-const tokens = new antlr4.CommonTokenStream(lexer);
-const parser = new JavaParser(tokens);
-parser.buildParseTrees = true;
-const tree = parser.compilationUnit();
+// class MyGrammarListener extends JavaParserListener {
+//     methodNames = [];
 
-antlr4.tree.ParseTreeWalker.DEFAULT.walk(new MyGrammarListener(), tree);
-
-// class Visitor {
-//     visitChildren(ctx) {
-//       if (!ctx) {
-//         return;
-//       }
-  
-//       if (ctx.children) {
-//         return ctx.children.map(child => {
-//           if (child.children && child.children.length != 0) {
-//             return child.accept(this);
-//           } else {
-//             return child.getText();
-//           }
-//         });
-//       }
+//     enterMethodDeclaration(ctx) {
+//         this.methodNames.push(ctx.identifier().getText());
 //     }
-//   }
-  
-//   tree.accept(new Visitor());
+// }
+
+// const chars = new antlr4.InputStream(text);
+// const lexer = new JavaLexer(chars);
+// const tokens = new antlr4.CommonTokenStream(lexer);
+// const parser = new JavaParser(tokens);
+// parser.buildParseTrees = true;
+// const tree = parser.compilationUnit();
+
+// const listener = new MyGrammarListener();
+// antlr4.tree.ParseTreeWalker.DEFAULT.walk(listener, tree);
+// console.log(listener.methodNames);
+
+
+const src2 = 'src/lucenenet-master';
+console.log(searchInFolder("JapaneseTokenizer", src2)[0]);
+const text2 = searchInFolder("JapaneseTokenizer", src2)[0].getText();
+
+
+// class MyGrammarListener extends JavaParserListener {
+//     methodNames = [];
+
+//     enterMethodDeclaration(ctx) {
+//         this.methodNames.push(ctx.identifier().getText());
+//     }
+// }
+
+// const chars = new antlr4.InputStream(text);
+// const lexer = new JavaLexer(chars);
+// const tokens = new antlr4.CommonTokenStream(lexer);
+// const parser = new JavaParser(tokens);
+// parser.buildParseTrees = true;
+// const tree = parser.compilationUnit();
+
+// const listener = new MyGrammarListener();
+// antlr4.tree.ParseTreeWalker.DEFAULT.walk(listener, tree);
+// console.log(listener.methodNames);
